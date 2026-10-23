@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Launch Kanban Board</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Phosphor Icons CDN for modern, clean iconography -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Inter Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            phase1: '#F59E0B',
+            phase2: '#3B82F6',
+            phase3: '#8B5CF6',
+            phase4: '#EC4899',
+            phase5: '#10B981',
+            phase6: '#EF4444',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbars for columns and drawers */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Dragging ghost styling */
+    .dragging {
+      opacity: 0.35;
+      transform: scale(0.98);
+    }
+    .drag-over {
+      background-color: #f1f5f9;
+      border: 2px dashed #94a3b8 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20 px-4 sm:px-6 py-3.5 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+          <i class="ph-bold ph-kanban text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            LaunchFlow Kanban
+            <span id="sync-indicator" class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Sync
+            </span>
+          </h1>
+          <p class="text-xs text-slate-500">Track and manage launch roadmap phases</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+        <!-- Add Task Button -->
+        <button id="open-create-modal-btn" class="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+          <i class="ph-bold ph-plus text-base"></i>
+          <span>Add Task</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN KANBAN BOARD ==================== -->
+  <main class="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full flex flex-col">
+    <!-- Board Columns Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 flex-1 items-start">
+      
+      <!-- Column: Not Started -->
+      <section class="kanban-column flex flex-col bg-slate-200/70 border border-slate-300/80 rounded-2xl p-3.5 min-h-[500px] max-h-[calc(100vh-130px)] shadow-sm" data-status="not_started">
+        <div class="flex items-center justify-between pb-3 px-1 border-b border-slate-300">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Not Started</h2>
+          </div>
+          <span class="task-count text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-300 text-slate-700" id="count-not_started">0</span>
+        </div>
+        <div class="cards-container flex-1 overflow-y-auto pt-3 space-y-3 min-h-[150px]" id="column-not_started">
+          <!-- Cards dynamically injected -->
+        </div>
+      </section>
+
+      <!-- Column: In Progress -->
+      <section class="kanban-column flex flex-col bg-slate-200/70 border border-slate-300/80 rounded-2xl p-3.5 min-h-[500px] max-h-[calc(100vh-130px)] shadow-sm" data-status="in_progress">
+        <div class="flex items-center justify-between pb-3 px-1 border-b border-slate-300">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">In Progress</h2>
+          </div>
+          <span class="task-count text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-300 text-slate-700" id="count-in_progress">0</span>
+        </div>
+        <div class="cards-container flex-1 overflow-y-auto pt-3 space-y-3 min-h-[150px]" id="column-in_progress">
+          <!-- Cards dynamically injected -->
+        </div>
+      </section>
+
+      <!-- Column: Under Review -->
+      <section class="kanban-column flex flex-col bg-slate-200/70 border border-slate-300/80 rounded-2xl p-3.5 min-h-[500px] max-h-[calc(100vh-130px)] shadow-sm" data-status="under_review">
+        <div class="flex items-center justify-between pb-3 px-1 border-b border-slate-300">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Under Review</h2>
+          </div>
+          <span class="task-count text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-300 text-slate-700" id="count-under_review">0</span>
+        </div>
+        <div class="cards-container flex-1 overflow-y-auto pt-3 space-y-3 min-h-[150px]" id="column-under_review">
+          <!-- Cards dynamically injected -->
+        </div>
+      </section>
+
+      <!-- Column: Completed -->
+      <section class="kanban-column flex flex-col bg-slate-200/70 border border-slate-300/80 rounded-2xl p-3.5 min-h-[500px] max-h-[calc(100vh-130px)] shadow-sm" data-status="completed">
+        <div class="flex items-center justify-between pb-3 px-1 border-b border-slate-300">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Completed</h2>
+          </div>
+          <span class="task-count text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-300 text-slate-700" id="count-completed">0</span>
+        </div>
+        <div class="cards-container flex-1 overflow-y-auto pt-3 space-y-3 min-h-[150px]" id="column-completed">
+          <!-- Cards dynamically injected -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ==================== MODAL: CREATE TASK ==================== -->
+  <div id="create-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm hidden transition-opacity">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden transform transition-all">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <i class="ph-bold ph-plus-circle text-lg"></i>
+          </span>
+          <h3 class="text-base font-bold text-slate-900">Create New Task</h3>
+        </div>
+        <button id="close-create-modal-btn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <form id="create-task-form" class="p-6 space-y-4">
+        <!-- Task Name -->
+        <div>
+          <label for="task-name" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Task Name *</label>
+          <input type="text" id="task-name" required placeholder="e.g., Run Landing Page Smoke Tests" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+
+        <!-- Phase Selector -->
+        <div>
+          <label for="task-phase" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Launch Phase *</label>
+          <div class="relative">
+            <select id="task-phase" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+              <option value="phase1">Phase 1 Validation (Demand Test)</option>
+              <option value="phase2">Phase 2 Market Research</option>
+              <option value="phase3">Phase 3 Brand Lock In</option>
+              <option value="phase4">Phase 4 Pre-Launch</option>
+              <option value="phase5">Phase 5 Supplier Procurement and Production</option>
+              <option value="phase6">Phase 6 Launch</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500">
+              <i class="ph-bold ph-caret-down"></i>
+            </div>
+          </div>
+          <!-- Dynamic Color Preview pill -->
+          <div class="mt-2 flex items-center gap-2">
+            <span class="text-xs text-slate-500">Phase Color:</span>
+            <span id="create-phase-preview" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold text-white" style="background-color: #F59E0B;">
+              Amber (#F59E0B)
+            </span>
+          </div>
+        </div>
+
+        <!-- Initial Column -->
+        <div>
+          <label for="task-status" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Initial Status</label>
+          <select id="task-status" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+            <option value="not_started">Not Started</option>
+            <option value="in_progress">In Progress</option>
+            <option value="under_review">Under Review</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        <!-- Task Description -->
+        <div>
+          <label for="task-desc" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Brief Task Description</label>
+          <textarea id="task-desc" rows="3" placeholder="Explain the deliverable or success criteria..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-3">
+          <button type="button" id="cancel-create-modal-btn" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors">
+            Cancel
+          </button>
+          <button type="submit" id="save-task-btn" class="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+            Create Task
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== DRAWER: TASK DETAIL ==================== -->
+  <div id="drawer-backdrop" class="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-xs hidden transition-opacity"></div>
+  
+  <aside id="task-drawer" class="fixed top-0 right-0 z-50 w-full sm:w-[480px] h-full bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <!-- Drawer Header -->
+    <div class="p-5 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+      <div class="space-y-1 pr-4">
+        <span id="drawer-phase-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white shadow-xs">
+          Phase
+        </span>
+        <h2 id="drawer-task-title" class="text-xl font-bold text-slate-900 leading-snug mt-1">
+          Task Title
+        </h2>
+      </div>
+      <button id="close-drawer-btn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60">
+        <i class="ph-bold ph-x text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Content Scrollable Area -->
+    <div class="flex-1 overflow-y-auto p-5 space-y-6">
+      
+      <!-- Status Switcher -->
+      <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+        <label for="drawer-task-status" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Column Status</label>
+        <select id="drawer-task-status" class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="not_started">Not Started</option>
+          <option value="in_progress">In Progress</option>
+          <option value="under_review">Under Review</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+
+      <!-- Description Block -->
+      <div>
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Description</h3>
+        <div id="drawer-task-desc" class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-white p-3.5 rounded-xl border border-slate-200/80 min-h-[72px]">
+          No description provided.
+        </div>
+      </div>
+
+      <!-- Persistent Notes Section -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="ph-bold ph-chat-teardrop-dots text-sm text-indigo-500"></i>
+            Activity & Notes
+          </h3>
+          <span id="notes-count-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">0 notes</span>
+        </div>
+
+        <!-- Add Note Input Box -->
+        <div class="space-y-2 mb-4">
+          <textarea id="drawer-new-note" rows="2" placeholder="Write a progress note or update..." class="w-full px-3 py-2 text-sm text-slate-800 placeholder-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+          <div class="flex justify-end">
+            <button id="drawer-add-note-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition-colors">
+              <i class="ph-bold ph-plus"></i>
+              Add Note
+            </button>
+          </div>
+        </div>
+
+        <!-- Notes Stream List -->
+        <div id="drawer-notes-list" class="space-y-2.5">
+          <!-- Dynamically inserted notes -->
+          <p class="text-xs text-slate-400 italic">No notes added yet.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer / Actions -->
+    <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+      <button id="drawer-delete-btn" class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors border border-red-200">
+        <i class="ph-bold ph-trash"></i>
+        Delete Task
+      </button>
+
+      <span class="text-[11px] text-slate-400">All changes auto-sync</span>
+    </div>
+  </aside>
+
+  <!-- ==================== DELETE CONFIRMATION MODAL ==================== -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs hidden">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center text-2xl">
+        <i class="ph-bold ph-warning"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-slate-900">Delete this task?</h3>
+        <p class="text-xs text-slate-500 mt-1">This action cannot be undone and will permanently remove this task and its notes for all users.</p>
+      </div>
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <button id="cancel-delete-btn" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+          Cancel
+        </button>
+        <button id="confirm-delete-btn" class="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-colors">
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== FIREBASE & BOARD APP SCRIPTS ==================== -->
+  <script type="module">
+    // 1. Firebase SDK Imports from CDN v11 (ES Module)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithCustomToken, 
+      signInAnonymously 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      setDoc, 
+      addDoc, 
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // 2. Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBD2m3oLWmKymKJ7_12z6pywR4AXqMUU7A",
+      authDomain: "venture-kanban.firebaseapp.com",
+      projectId: "venture-kanban",
+      storageBucket: "venture-kanban.firebasestorage.app",
+      messagingSenderId: "795208025186",
+      appId: "1:795208025186:web:bb1f2816f07aacfbb23d3b"
+    };
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'venture-kanban';
+
+    // Phase definitions with exact requested colors and labels
+    const PHASES = {
+      phase1: { label: 'Phase 1 Validation (Demand Test)', color: '#F59E0B' },
+      phase2: { label: 'Phase 2 Market Research', color: '#3B82F6' },
+      phase3: { label: 'Phase 3 Brand Lock In', color: '#8B5CF6' },
+      phase4: { label: 'Phase 4 Pre-Launch', color: '#EC4899' },
+      phase5: { label: 'Phase 5 Supplier Procurement and Production', color: '#10B981' },
+      phase6: { label: 'Phase 6 Launch', color: '#EF4444' }
+    };
+
+    // App state
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let tasksMap = new Map(); // In-memory map of tasks keyed by task ID
+    let currentActiveTaskId = null;
+    let taskPendingDeletionId = null;
+
+    // Toast helper
+    function showToast(message, type = 'info') {
+      const toastContainer = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold text-white pointer-events-auto flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 ${
+        type === 'error' ? 'bg-red-600' : 'bg-slate-900'
+      }`;
+      toast.innerHTML = `<i class="ph-bold ${type === 'error' ? 'ph-warning-circle' : 'ph-check-circle'}"></i><span>${escapeHtml(message)}</span>`;
+      toastContainer.appendChild(toast);
+      
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Initialize Firebase and Auth
+    async function initFirebase() {
+      try {
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // Sign in auth requirement
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        currentUser = auth.currentUser;
+        setupRealtimeListener();
+      } catch (err) {
+        console.warn('Firebase initialization or network fallback:', err);
+        // Fallback to local memory mock mode with demo data if Firebase cannot connect
+        setupOfflineFallback();
+      }
+    }
+
+    // Helper for public Firestore path per Rule 1
+    function getTasksCollection() {
+      return collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
+    }
+
+    // Set up Real-time Snapshot Listener on tasks collection
+    function setupRealtimeListener() {
+      if (!db || !currentUser) return;
+
+      const tasksRef = getTasksCollection();
+
+      onSnapshot(tasksRef, (snapshot) => {
+        tasksMap.clear();
+        
+        // If collection is completely empty, populate initial sample tasks
+        if (snapshot.empty) {
+          seedInitialTasks();
+          return;
+        }
+
+        snapshot.forEach((docSnap) => {
+          tasksMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+        });
+
+        renderBoard();
+
+        // If drawer is currently open for an existing task, refresh drawer content
+        if (currentActiveTaskId && tasksMap.has(currentActiveTaskId)) {
+          renderDrawerDetails(tasksMap.get(currentActiveTaskId));
+        } else if (currentActiveTaskId && !tasksMap.has(currentActiveTaskId)) {
+          closeDrawer();
+        }
+      }, (error) => {
+        console.error("Firestore onSnapshot error:", error);
+        showToast("Sync error: Reconnecting...", "error");
+      });
+    }
+
+    // Seed helpful starter items for first-time usage
+    async function seedInitialTasks() {
+      const sampleTasks = [
+        {
+          name: "Audience Landing Page Test",
+          desc: "Create 2 variants of high-intent landing page to gauge initial email sign-ups before development.",
+          phase: "phase1",
+          status: "not_started",
+          createdAt: Date.now() - 3600000 * 24,
+          notes: [
+            { text: "Targeting CPA under $2.50 per validated signup.", timestamp: Date.now() - 3600000 * 20 }
+          ]
+        },
+        {
+          name: "Competitive Pricing Audit",
+          desc: "Analyze top 5 competitors in the niche to map price points, margin tiers, and shipping offers.",
+          phase: "phase2",
+          status: "in_progress",
+          createdAt: Date.now() - 3600000 * 18,
+          notes: [
+            { text: "Spreadsheet drafted in Shared Drive.", timestamp: Date.now() - 3600000 * 10 }
+          ]
+        },
+        {
+          name: "Trademark & Brand Book Lock",
+          desc: "Finalize visual style guide, typography, packaging guidelines, and submit USPTO registration.",
+          phase: "phase3",
+          status: "under_review",
+          createdAt: Date.now() - 3600000 * 12,
+          notes: []
+        },
+        {
+          name: "Supplier Sample Quality Inspection",
+          desc: "Review batch prototypes, test material durability, and sign QA master agreement.",
+          phase: "phase5",
+          status: "completed",
+          createdAt: Date.now() - 3600000 * 48,
+          notes: [
+            { text: "Sample 2 passed stress tests.", timestamp: Date.now() - 3600000 * 30 }
+          ]
+        }
+      ];
+
+      for (const t of sampleTasks) {
+        await addDoc(getTasksCollection(), t);
+      }
+    }
+
+    // Offline mock fallback if Firestore credentials are dummy / unconfigured
+    function setupOfflineFallback() {
+      const syncEl = document.getElementById('sync-indicator');
+      if (syncEl) {
+        syncEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Local / Offline Mode`;
+        syncEl.className = "inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200";
+      }
+
+      // Populate local mockup
+      const demo = [
+        { id: "task-1", name: "Smoke Test Validation Ad Sets", desc: "Run meta ads to validate conversion rate.", phase: "phase1", status: "not_started", createdAt: Date.now() - 50000, notes: [] },
+        { id: "task-2", name: "Competitor Benchmark", desc: "Audit 10 direct competitors and their pricing strategies.", phase: "phase2", status: "in_progress", createdAt: Date.now() - 40000, notes: [{ text: "Done with 6 so far.", timestamp: Date.now() - 20000 }] },
+        { id: "task-3", name: "Supplier Contract Negotiation", desc: "Secure MOQ terms with manufacturing partners.", phase: "phase5", status: "under_review", createdAt: Date.now() - 30000, notes: [] },
+        { id: "task-4", name: "Influencer Seeding Strategy", desc: "Send 50 VIP boxes to key category creators.", phase: "phase4", status: "completed", createdAt: Date.now() - 10000, notes: [] }
+      ];
+
+      demo.forEach(d => tasksMap.set(d.id, d));
+      renderBoard();
+    }
+
+    // ==================== RENDERING LOGIC ====================
+
+    function renderBoard() {
+      const columns = ['not_started', 'in_progress', 'under_review', 'completed'];
+      const columnCounts = { not_started: 0, in_progress: 0, under_review: 0, completed: 0 };
+      
+      // Clear all column containers
+      columns.forEach(col => {
+        const container = document.getElementById(`column-${col}`);
+        if (container) container.innerHTML = '';
+      });
+
+      // Sort tasks by createdAt ascending
+      const sortedTasks = Array.from(tasksMap.values()).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+      sortedTasks.forEach(task => {
+        const status = task.status || 'not_started';
+        if (columnCounts[status] !== undefined) {
+          columnCounts[status]++;
+        }
+
+        const container = document.getElementById(`column-${status}`);
+        if (container) {
+          container.appendChild(createCardElement(task));
+        }
+      });
+
+      // Update counters
+      columns.forEach(col => {
+        const countSpan = document.getElementById(`count-${col}`);
+        if (countSpan) countSpan.textContent = columnCounts[col] || 0;
+      });
+    }
+
+    // Build DOM for individual Task Card
+    function createCardElement(task) {
+      const card = document.createElement('div');
+      card.className = "task-card bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all cursor-grab active:cursor-grabbing group";
+      card.setAttribute('draggable', 'true');
+      card.dataset.id = task.id;
+
+      const phaseInfo = PHASES[task.phase] || { label: 'General', color: '#64748B' };
+      const notesCount = Array.isArray(task.notes) ? task.notes.length : 0;
+      const snippet = task.desc ? task.desc.trim() : 'No additional details.';
+
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold text-white uppercase tracking-wider shadow-xs" style="background-color: ${phaseInfo.color};">
+            ${escapeHtml(phaseInfo.label)}
+          </span>
+          <i class="ph-bold ph-dots-six-vertical text-slate-300 group-hover:text-slate-500 text-sm mt-0.5"></i>
+        </div>
+
+        <h4 class="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-tight mb-1.5">
+          ${escapeHtml(task.name)}
+        </h4>
+
+        <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">
+          ${escapeHtml(snippet)}
+        </p>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+          <span class="flex items-center gap-1 font-medium">
+            <i class="ph-bold ph-chat-teardrop-text"></i>
+            ${notesCount} ${notesCount === 1 ? 'note' : 'notes'}
+          </span>
+          <span class="text-indigo-500 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+            Details <i class="ph-bold ph-arrow-right text-[10px]"></i>
+          </span>
+        </div>
+      `;
+
+      // Drag & Drop handlers on Card
+      card.addEventListener('dragstart', handleDragStart);
+      card.addEventListener('dragend', handleDragEnd);
+
+      // Click card opens drawer
+      card.addEventListener('click', (e) => {
+        // Prevent open if dragging was triggered
+        if (card.classList.contains('dragging')) return;
+        openTaskDrawer(task.id);
+      });
+
+      return card;
+    }
+
+    // ==================== DRAG & DROP LOGIC ====================
+    let draggedTaskId = null;
+
+    function handleDragStart(e) {
+      draggedTaskId = this.dataset.id;
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', this.dataset.id);
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+      document.querySelectorAll('.kanban-column').forEach(col => col.classList.remove('drag-over'));
+      draggedTaskId = null;
+    }
+
+    // Setup column drop zones
+    function setupDragAndDropColumns() {
+      const columns = document.querySelectorAll('.kanban-column');
+
+      columns.forEach(col => {
+        col.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          col.classList.add('drag-over');
+        });
+
+        col.addEventListener('dragleave', (e) => {
+          // Check if relatedTarget is still within column
+          if (!col.contains(e.relatedTarget)) {
+            col.classList.remove('drag-over');
+          }
+        });
+
+        col.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          col.classList.remove('drag-over');
+          
+          const targetStatus = col.dataset.status;
+          const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
+
+          if (!taskId || !targetStatus) return;
+
+          const task = tasksMap.get(taskId);
+          if (task && task.status !== targetStatus) {
+            await updateTaskStatus(taskId, targetStatus);
+          }
+        });
+      });
+    }
+
+    // Persist status change
+    async function updateTaskStatus(taskId, newStatus) {
+      // Optimistic update
+      const localTask = tasksMap.get(taskId);
+      if (localTask) {
+        localTask.status = newStatus;
+        renderBoard();
+      }
+
+      if (db && currentUser) {
+        try {
+          const taskDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId);
+          await updateDoc(taskDocRef, { status: newStatus });
+        } catch (error) {
+          console.error('Error updating task status:', error);
+          showToast('Failed to update status on server', 'error');
+        }
+      }
+    }
+
+    // ==================== TASK CREATION MODAL ====================
+    const createModal = document.getElementById('create-modal');
+    const openCreateBtn = document.getElementById('open-create-modal-btn');
+    const closeCreateBtn = document.getElementById('close-create-modal-btn');
+    const cancelCreateBtn = document.getElementById('cancel-create-modal-btn');
+    const createTaskForm = document.getElementById('create-task-form');
+    const taskPhaseSelect = document.getElementById('task-phase');
+    const createPhasePreview = document.getElementById('create-phase-preview');
+
+    function openCreateModal() {
+      createTaskForm.reset();
+      updatePhasePreview();
+      createModal.classList.remove('hidden');
+    }
+
+    function closeCreateModal() {
+      createModal.classList.add('hidden');
+    }
+
+    function updatePhasePreview() {
+      const phaseKey = taskPhaseSelect.value;
+      const phase = PHASES[phaseKey];
+      if (phase && createPhasePreview) {
+        createPhasePreview.style.backgroundColor = phase.color;
+        createPhasePreview.textContent = `${phase.label} (${phase.color})`;
+      }
+    }
+
+    taskPhaseSelect.addEventListener('change', updatePhasePreview);
+    openCreateBtn.addEventListener('click', openCreateModal);
+    closeCreateBtn.addEventListener('click', closeCreateModal);
+    cancelCreateBtn.addEventListener('click', closeCreateModal);
+
+    createTaskForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('task-name').value.trim();
+      const phase = document.getElementById('task-phase').value;
+      const status = document.getElementById('task-status').value;
+      const desc = document.getElementById('task-desc').value.trim();
+
+      if (!name) return;
+
+      const newTask = {
+        name,
+        phase,
+        status,
+        desc,
+        createdAt: Date.now(),
+        notes: []
+      };
+
+      try {
+        if (db && currentUser) {
+          await addDoc(getTasksCollection(), newTask);
+        } else {
+          // Local fallback
+          const localId = 'task-' + Date.now();
+          tasksMap.set(localId, { id: localId, ...newTask });
+          renderBoard();
+        }
+        showToast('Task added successfully');
+        closeCreateModal();
+      } catch (err) {
+        console.error('Error creating task:', err);
+        showToast('Could not save task', 'error');
+      }
+    });
+
+    // ==================== TASK DETAIL DRAWER ====================
+    const drawer = document.getElementById('task-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    const closeDrawerBtn = document.getElementById('close-drawer-btn');
+    const drawerTitle = document.getElementById('drawer-task-title');
+    const drawerBadge = document.getElementById('drawer-phase-badge');
+    const drawerStatus = document.getElementById('drawer-task-status');
+    const drawerDesc = document.getElementById('drawer-task-desc');
+    const drawerNotesList = document.getElementById('drawer-notes-list');
+    const drawerNewNote = document.getElementById('drawer-new-note');
+    const drawerAddNoteBtn = document.getElementById('drawer-add-note-btn');
+    const drawerDeleteBtn = document.getElementById('drawer-delete-btn');
+    const notesCountBadge = document.getElementById('notes-count-badge');
+
+    function openTaskDrawer(taskId) {
+      const task = tasksMap.get(taskId);
+      if (!task) return;
+
+      currentActiveTaskId = taskId;
+      renderDrawerDetails(task);
+
+      backdrop.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        drawer.classList.remove('translate-x-full');
+      });
+    }
+
+    function closeDrawer() {
+      drawer.classList.add('translate-x-full');
+      setTimeout(() => {
+        backdrop.classList.add('hidden');
+        currentActiveTaskId = null;
+      }, 300);
+    }
+
+    function renderDrawerDetails(task) {
+      drawerTitle.textContent = task.name || 'Untitled Task';
+      
+      const phaseInfo = PHASES[task.phase] || { label: 'General', color: '#64748B' };
+      drawerBadge.style.backgroundColor = phaseInfo.color;
+      drawerBadge.textContent = phaseInfo.label;
+
+      drawerStatus.value = task.status || 'not_started';
+      drawerDesc.textContent = task.desc && task.desc.trim() !== '' ? task.desc : 'No description provided.';
+
+      // Render Notes
+      const notes = Array.isArray(task.notes) ? task.notes : [];
+      notesCountBadge.textContent = `${notes.length} ${notes.length === 1 ? 'note' : 'notes'}`;
+      drawerNotesList.innerHTML = '';
+
+      if (notes.length === 0) {
+        drawerNotesList.innerHTML = `<p class="text-xs text-slate-400 italic py-2">No notes added yet. Keep updates and links organized here.</p>`;
+      } else {
+        // Display newest notes on top
+        const sortedNotes = [...notes].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        sortedNotes.forEach(note => {
+          const noteCard = document.createElement('div');
+          noteCard.className = "p-3 bg-slate-50 border border-slate-200/70 rounded-xl space-y-1";
+          
+          const timeFormatted = note.timestamp 
+            ? new Date(note.timestamp).toLocaleString(undefined, { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })
+            : 'Just now';
+
+          noteCard.innerHTML = `
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span class="font-medium text-slate-600 flex items-center gap-1">
+                <i class="ph-bold ph-user-circle"></i> Update
+              </span>
+              <span>${timeFormatted}</span>
+            </div>
+            <p class="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">${escapeHtml(note.text)}</p>
+          `;
+          drawerNotesList.appendChild(noteCard);
+        });
+      }
+    }
+
+    // Drawer status change handler
+    drawerStatus.addEventListener('change', async (e) => {
+      if (!currentActiveTaskId) return;
+      const newStatus = e.target.value;
+      await updateTaskStatus(currentActiveTaskId, newStatus);
+    });
+
+    // Append new timestamped note
+    async function handleAddNote() {
+      if (!currentActiveTaskId) return;
+      const noteText = drawerNewNote.value.trim();
+      if (!noteText) return;
+
+      const currentTask = tasksMap.get(currentActiveTaskId);
+      if (!currentTask) return;
+
+      const newNote = {
+        text: noteText,
+        timestamp: Date.now()
+      };
+
+      const existingNotes = Array.isArray(currentTask.notes) ? currentTask.notes : [];
+      const updatedNotes = [...existingNotes, newNote];
+
+      // Optimistic update
+      currentTask.notes = updatedNotes;
+      renderDrawerDetails(currentTask);
+      renderBoard();
+      drawerNewNote.value = '';
+
+      if (db && currentUser) {
+        try {
+          const taskDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', currentActiveTaskId);
+          await updateDoc(taskDocRef, { notes: updatedNotes });
+          showToast('Note added');
+        } catch (error) {
+          console.error("Error adding note:", error);
+          showToast('Failed to sync note', 'error');
+        }
+      }
+    }
+
+    drawerAddNoteBtn.addEventListener('click', handleAddNote);
+    drawerNewNote.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        handleAddNote();
+      }
+    });
+
+    closeDrawerBtn.addEventListener('click', closeDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+
+    // ==================== DELETE DIALOG LOGIC ====================
+    const confirmModal = document.getElementById('confirm-modal');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+    drawerDeleteBtn.addEventListener('click', () => {
+      if (!currentActiveTaskId) return;
+      taskPendingDeletionId = currentActiveTaskId;
+      confirmModal.classList.remove('hidden');
+    });
+
+    cancelDeleteBtn.addEventListener('click', () => {
+      taskPendingDeletionId = null;
+      confirmModal.classList.add('hidden');
+    });
+
+    confirmDeleteBtn.addEventListener('click', async () => {
+      if (!taskPendingDeletionId) return;
+      const idToDelete = taskPendingDeletionId;
+      taskPendingDeletionId = null;
+      confirmModal.classList.add('hidden');
+
+      // Optimistic delete
+      tasksMap.delete(idToDelete);
+      closeDrawer();
+      renderBoard();
+
+      if (db && currentUser) {
+        try {
+          const taskDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', idToDelete);
+          await deleteDoc(taskDocRef);
+          showToast('Task deleted');
+        } catch (error) {
+          console.error('Error deleting task:', error);
+          showToast('Failed to delete task', 'error');
+        }
+      }
+    });
+
+    // ==================== INITIALIZATION ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      setupDragAndDropColumns();
+      updatePhasePreview();
+      initFirebase();
+    });
+  </script>
+</body>
+</html>
