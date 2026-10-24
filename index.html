@@ -240,18 +240,45 @@
   
   <aside id="task-drawer" class="fixed top-0 right-0 z-50 w-full sm:w-[480px] h-full bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
     <!-- Drawer Header -->
-    <div class="p-5 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
-      <div class="space-y-1 pr-4">
+    <div class="p-5 border-b border-slate-100 flex items-start justify-between gap-3 bg-slate-50/50">
+      <div class="space-y-1 flex-1 min-w-0">
         <span id="drawer-phase-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white shadow-xs">
           Phase
         </span>
+
+        <!-- Edit mode: phase selector (hidden in view mode) -->
+        <div id="drawer-phase-edit" class="hidden space-y-1.5 pt-0.5">
+          <div class="relative">
+            <select id="drawer-task-phase" class="w-full px-3 py-1.5 pr-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+              <option value="phase1">Phase 1 Validation (Demand Test)</option>
+              <option value="phase2">Phase 2 Market Research</option>
+              <option value="phase3">Phase 3 Brand Lock In</option>
+              <option value="phase4">Phase 4 Pre-Launch</option>
+              <option value="phase5">Phase 5 Supplier Procurement and Production</option>
+              <option value="phase6">Phase 6 Launch</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-500">
+              <i class="ph-bold ph-caret-down text-xs"></i>
+            </div>
+          </div>
+          <span id="drawer-phase-preview" class="inline-flex max-w-full items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white leading-snug" style="background-color: #F59E0B;">
+            Phase 1 Validation (Demand Test)
+          </span>
+        </div>
+
         <h2 id="drawer-task-title" class="text-xl font-bold text-slate-900 leading-snug mt-1">
           Task Title
         </h2>
+        <input type="text" id="drawer-task-title-input" placeholder="Task name" class="hidden w-full mt-1 px-3 py-1.5 rounded-lg border border-slate-200 text-base font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
       </div>
-      <button id="close-drawer-btn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60">
-        <i class="ph-bold ph-x text-xl"></i>
-      </button>
+      <div class="flex items-center gap-0.5 shrink-0">
+        <button type="button" id="drawer-edit-btn" aria-label="Edit task" title="Edit task" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-50 transition-colors">
+          <i class="ph-bold ph-pencil-simple text-xl"></i>
+        </button>
+        <button id="close-drawer-btn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60">
+          <i class="ph-bold ph-x text-xl"></i>
+        </button>
+      </div>
     </div>
 
     <!-- Drawer Content Scrollable Area -->
@@ -274,6 +301,7 @@
         <div id="drawer-task-desc" class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-white p-3.5 rounded-xl border border-slate-200/80 min-h-[72px]">
           No description provided.
         </div>
+        <textarea id="drawer-task-desc-input" rows="4" placeholder="Explain the deliverable or success criteria..." class="hidden w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
       </div>
 
       <!-- Persistent Notes Section -->
@@ -307,13 +335,24 @@
     </div>
 
     <!-- Drawer Footer / Actions -->
-    <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+    <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
       <button id="drawer-delete-btn" class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors border border-red-200">
         <i class="ph-bold ph-trash"></i>
         Delete Task
       </button>
 
-      <span class="text-[11px] text-slate-400">All changes auto-sync</span>
+      <div class="flex items-center gap-2">
+        <span id="drawer-autosync-note" class="text-[11px] text-slate-400">All changes auto-sync</span>
+        <div id="drawer-edit-actions" class="hidden items-center gap-2">
+          <button type="button" id="drawer-cancel-edit-btn" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors">
+            Cancel
+          </button>
+          <button type="button" id="drawer-save-edit-btn" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+            <i class="ph-bold ph-check"></i>
+            Save Changes
+          </button>
+        </div>
+      </div>
     </div>
   </aside>
 
@@ -790,11 +829,31 @@
     const drawerDeleteBtn = document.getElementById('drawer-delete-btn');
     const notesCountBadge = document.getElementById('notes-count-badge');
 
+    // Inline editing elements
+    const drawerEditBtn = document.getElementById('drawer-edit-btn');
+    const drawerEditActions = document.getElementById('drawer-edit-actions');
+    const drawerCancelEditBtn = document.getElementById('drawer-cancel-edit-btn');
+    const drawerSaveEditBtn = document.getElementById('drawer-save-edit-btn');
+    const drawerAutosyncNote = document.getElementById('drawer-autosync-note');
+    const drawerTitleInput = document.getElementById('drawer-task-title-input');
+    const drawerPhaseEdit = document.getElementById('drawer-phase-edit');
+    const drawerPhaseSelect = document.getElementById('drawer-task-phase');
+    const drawerPhasePreview = document.getElementById('drawer-phase-preview');
+    const drawerDescInput = document.getElementById('drawer-task-desc-input');
+
+    let isEditingTask = false;
+
     function openTaskDrawer(taskId) {
       const task = tasksMap.get(taskId);
       if (!task) return;
 
       currentActiveTaskId = taskId;
+
+      // Always open in read-only view mode
+      if (isEditingTask) {
+        isEditingTask = false;
+        setDrawerEditMode(false);
+      }
       renderDrawerDetails(task);
 
       backdrop.classList.remove('hidden');
@@ -804,6 +863,12 @@
     }
 
     function closeDrawer() {
+      // Discard any in-progress edits when the drawer is dismissed
+      if (isEditingTask) {
+        isEditingTask = false;
+        setDrawerEditMode(false);
+      }
+
       drawer.classList.add('translate-x-full');
       setTimeout(() => {
         backdrop.classList.add('hidden');
@@ -820,6 +885,14 @@
 
       drawerStatus.value = task.status || 'not_started';
       drawerDesc.textContent = task.desc && task.desc.trim() !== '' ? task.desc : 'No description provided.';
+
+      // Don't clobber unsaved input while a realtime update arrives mid-edit
+      if (!isEditingTask) {
+        drawerTitleInput.value = task.name || '';
+        drawerPhaseSelect.value = PHASES[task.phase] ? task.phase : 'phase1';
+        drawerDescInput.value = task.desc || '';
+      }
+      updateDrawerPhasePreview();
 
       // Render Notes
       const notes = Array.isArray(task.notes) ? task.notes : [];
@@ -858,6 +931,142 @@
         });
       }
     }
+
+    // ==================== INLINE TASK EDITING ====================
+
+    function updateDrawerPhasePreview() {
+      const phaseKey = drawerPhaseSelect.value;
+      const phase = PHASES[phaseKey] || { label: 'General', color: '#64748B' };
+      drawerPhasePreview.style.backgroundColor = phase.color;
+      drawerPhasePreview.textContent = phase.label;
+    }
+
+    // Toggle the drawer between read-only view and inline edit mode
+    function setDrawerEditMode(editing) {
+      // View-mode elements
+      drawerBadge.classList.toggle('hidden', editing);
+      drawerBadge.classList.toggle('inline-block', !editing);
+      drawerTitle.classList.toggle('hidden', editing);
+      drawerDesc.classList.toggle('hidden', editing);
+      drawerEditBtn.classList.toggle('hidden', editing);
+      drawerAutosyncNote.classList.toggle('hidden', editing);
+
+      // Edit-mode elements
+      drawerTitleInput.classList.toggle('hidden', !editing);
+      drawerPhaseEdit.classList.toggle('hidden', !editing);
+      drawerDescInput.classList.toggle('hidden', !editing);
+
+      // Save/Cancel group needs an explicit flex display when shown
+      drawerEditActions.classList.toggle('hidden', !editing);
+      drawerEditActions.classList.toggle('flex', editing);
+    }
+
+    function enterEditMode() {
+      if (!currentActiveTaskId) return;
+      const task = tasksMap.get(currentActiveTaskId);
+      if (!task) return;
+
+      // Pre-fill inputs from the current task state
+      drawerTitleInput.value = task.name || '';
+      drawerPhaseSelect.value = PHASES[task.phase] ? task.phase : 'phase1';
+      drawerDescInput.value = task.desc || '';
+      updateDrawerPhasePreview();
+
+      isEditingTask = true;
+      setDrawerEditMode(true);
+
+      drawerTitleInput.focus();
+      drawerTitleInput.select();
+    }
+
+    function cancelEditMode() {
+      if (!isEditingTask) return;
+
+      isEditingTask = false;
+      setDrawerEditMode(false);
+
+      const task = currentActiveTaskId ? tasksMap.get(currentActiveTaskId) : null;
+      if (task) renderDrawerDetails(task);
+    }
+
+    async function saveTaskEdits() {
+      if (!isEditingTask || !currentActiveTaskId) return;
+
+      const taskId = currentActiveTaskId;
+      const task = tasksMap.get(taskId);
+      if (!task) return;
+
+      const name = drawerTitleInput.value.trim();
+      const phase = drawerPhaseSelect.value;
+      const desc = drawerDescInput.value.trim();
+
+      if (!name) {
+        showToast('Task name cannot be empty', 'error');
+        drawerTitleInput.focus();
+        return;
+      }
+
+      const previous = { name: task.name, phase: task.phase, desc: task.desc };
+      const nextPhase = PHASES[phase] ? phase : task.phase;
+
+      // Optimistic local update
+      task.name = name;
+      task.phase = nextPhase;
+      task.desc = desc;
+
+      isEditingTask = false;
+      setDrawerEditMode(false);
+      renderDrawerDetails(task);
+      renderBoard();
+
+      if (!db || !currentUser) {
+        showToast('Task updated');
+        return;
+      }
+
+      try {
+        const taskDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId);
+        await updateDoc(taskDocRef, { name, phase: nextPhase, desc });
+        showToast('Task updated');
+      } catch (error) {
+        console.error('Error updating task details:', error);
+
+        // Roll back the optimistic change so the UI matches the server
+        task.name = previous.name;
+        task.phase = previous.phase;
+        task.desc = previous.desc;
+        renderBoard();
+        if (currentActiveTaskId === taskId) renderDrawerDetails(task);
+        showToast('Failed to save changes', 'error');
+      }
+    }
+
+    drawerEditBtn.addEventListener('click', enterEditMode);
+    drawerCancelEditBtn.addEventListener('click', cancelEditMode);
+    drawerSaveEditBtn.addEventListener('click', saveTaskEdits);
+    drawerPhaseSelect.addEventListener('change', updateDrawerPhasePreview);
+
+    drawerTitleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveTaskEdits();
+      }
+    });
+
+    drawerDescInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        saveTaskEdits();
+      }
+    });
+
+    // Escape cancels editing from anywhere inside the drawer
+    drawer.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isEditingTask) {
+        e.preventDefault();
+        cancelEditMode();
+      }
+    });
 
     // Drawer status change handler
     drawerStatus.addEventListener('change', async (e) => {
